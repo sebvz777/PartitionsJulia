@@ -2,129 +2,45 @@ import Base.hash
 import Base.==
 import Base.copy
 using InteractiveUtils
-
+include("partition.jl")
 
 """
-helper_new_point_values_array(x)
+SpatialPartition
 
-This function outputs a semantically identical Partition in form of an array which has new number values (in O(n)).
+Initialize Spatial Partition object
 
 # Arguments
-- `p`: The input partition as array which we do not change
-- `q`: The input partition as array that we change according to the values of p
-
-# Returns
-- Semantically equal partition as array to q without point numbers in p
+- `upper_points`: upper points of Spatial Partition as array of arrays (length of arrays in arrays are the depth m)
+- `lower_points`: lower points of Partition as array of arrays (length of arrays in arrays are the depth m)
+- `normal_form`: optional input, transforms to normal form if true, else spatial partition syntax remains
 """
-function helper_new_point_values_array(p::Array, q::Array)
-
-    p_points = vcat(copy(p[1]), copy(p[2]))
-
-    if !(isempty(p_points))
-        new_id, index = findmax(p_points)
-        new_id += 1
-    else
-        new_id = 1 
-    end
-
-    q_points = vcat(q[1], q[2])
-    new_ids = Dict()
-
-    for n in q_points
-        new_ids[n] = new_id
-        new_id += 1
-    end
-
-    upper = []
-    for (i, n) in enumerate(q[1])
-        push!(upper, get(new_ids, n, -1))
-    end
-
-    lower = []
-    for (i, n) in enumerate(q[2])
-        push!(lower, get(new_ids, n, -1))
-    end
-
-    [upper, lower]
-    
-end
-
-"""
-normal_form_array(x)
-
-This function outputs a semantically identical Partition of array form which has new number values from 1 to number of blocks of Partitions (in O(n)).
-
-# Arguments
-- `p`: Input partition as array
-
-# Returns
-- `p` with consisten form
-"""
-function normal_form_array(p::Array)
-
-    new_id = 1
-    new_ids = Dict()
-    p = helper_new_point_values_array([[length(p[1]) + length(p[2])], []], p)
-
-    for (i, n) in enumerate(p[1])
-        if !(n in keys(new_ids))
-            new_ids[n] = new_id
-            p[1][i] = new_id
-            new_id += 1
-        else
-            p[1][i] = get(new_ids, p[1][i], -1)
-        end
-    end
-
-    for (i, n) in enumerate(p[2])
-        if !(n in keys(new_ids))
-            new_ids[n] = new_id
-            p[2][i] = new_id
-            new_id += 1
-        else
-            p[2][i] = get(new_ids, p[2][i], -1)
-        end
-    end
-    p
-end
-
-"""
-Partition
-
-Initialize Partition object
-
-# Arguments
-- `upper_points`: upper points of Partition as array
-- `lower_points`: lower points of Partition as array
-- `normal_form`: optional input, transforms to normal form if true, else partition syntax remains
-"""
-struct Partition
+struct SpatialPartition
     upper_points::Array{Int64, 1}
     lower_points::Array{Int64, 1}
+    dimension::Int64
 
-    function Partition(upper_points::AbstractArray, lower_points::AbstractArray, normal_form::Bool = true)
+    function SpatialPartition(upper_points::AbstractArray, lower_points::AbstractArray, dimension::Int64, normal_form::Bool = true)
         if normal_form
             (upper_points, lower_points) = normal_form_array([Int64.(upper_points), Int64.(lower_points)])
         end
-        return new(upper_points, lower_points)
+        return new(upper_points, lower_points, dimension)
     end
 end
 
+function hash(p::SpatialPartition)
 
-function hash(p::Partition)
-
-    hash([hash(p.upper_points), hash(p.lower_points)])
+    hash([hash(p.upper_points), hash(p.lower_points), hash(p.dimension)])
     
 end
 
-function ==(p::Partition, q::Partition)
+function ==(p::SpatialPartition, q::SpatialPartition)
 
-    p.lower_points == q.lower_points && p.upper_points == q.upper_points
+    p.lower_points == q.lower_points && p.upper_points == q.upper_points && p.dimension == q.dimension
 
 end
 
-function copy(p::Partition)
-    return Partition(copy(p.upper_points), copy(p.lower_points))
+function copy(p::SpatialPartition)
+    return SpatialPartition(copy(p.upper_points), copy(p.lower_points), copy(p.dimension))
 end
 
 """
@@ -139,7 +55,7 @@ This function outputs a semantically identical Partition which has new number va
 # Returns
 - Semantically equal partition to q without point numbers in p
 """
-function helper_new_point_values(p::Partition, q::Partition)
+function helper_new_point_values(p::SpatialPartition, q::SpatialPartition)
 
     p_points::Array{Int} = vcat(copy(p.upper_points), copy(p.lower_points))
 
@@ -168,7 +84,7 @@ function helper_new_point_values(p::Partition, q::Partition)
         push!(lower, get(new_ids, n, -1)::Int)
     end
 
-    Partition(upper, lower, false)
+    SpatialPartition(upper, lower, q.dimension, false)
     
 end
 
@@ -184,11 +100,11 @@ This function outputs a semantically identical Partition which has new number va
 # Returns
 - `p` with consisten form
 """
-function normal_form(p::Partition)
+function normal_form(p::SpatialPartition)
 
     new_id::Int = 1
     new_ids::Dict{Int, Int} = Dict()
-    p::Partition = helper_new_point_values(Partition([length(p.upper_points) + length(p.lower_points)], []), p)
+    p::SpatialPartition = helper_new_point_values(SpatialPartition([length(p.upper_points) + length(p.lower_points)], [], p.dimension), p)
 
     for (i, n) in enumerate(p.upper_points)
         if !(n in keys(new_ids))
@@ -218,17 +134,19 @@ tensor_product(p, q)
 This function applies on p tensor product with q (in O(n)).
 
 # Arguments
-- `p`: Input partition
-- `q`: Second input partition
+- `p`: Input Spatial partition
+- `q`: Second input Spatial partition
 
 # Returns
 - `p` tensor product `q`
 """
-function tensor_product(p::Partition, q::Partition)
+function tensor_product(p::SpatialPartition, q::SpatialPartition)
+
+    @assert p.dimension == q.dimension "p and q have different dimensions in tensor product"
 
     q_new = helper_new_point_values(p, q)
 
-    Partition(vcat(p.upper_points, q_new.upper_points), vcat(p.lower_points, q_new.lower_points))
+    SpatialPartition(vcat(p.upper_points, q_new.upper_points), vcat(p.lower_points, q_new.lower_points), p.dimension)
 end
 
 """
@@ -237,80 +155,15 @@ involution(p)
 This function applies an involution on `p` (in O(n) because normal_form, else O(1)).
 
 # Arguments
-- `p`: Input partition
+- `p`: Input spatial partition
 
 # Returns
 - involution of `p`
 """
-function involution(p::Partition)
+function involution(p::SpatialPartition)
 
-    Partition(copy(p.lower_points), copy(p.upper_points))
+    SpatialPartition(copy(p.lower_points), copy(p.upper_points), p.dimension)
 
-end
-
-"""
-vertical_reflection(x)
-
-This function applies an vertical reflection on `p` (in O(n) because normal_form, else O(1)).
-
-# Arguments
-- `p`: Input partition
-
-# Returns
-- vertical reflection of `p`
-"""
-function vertical_reflection(p::Partition)
-
-    Partition(reverse(p.upper_points), reverse(p.lower_points))
-
-end
-
-"""
-rotation(x)
-
-This function applies a rotation on `p` (in O(n) because normal_form, else O(1)). 
-
-# Arguments
-- `p`: Input partition
-- `lr`: lr whether left (true) or right (false)
-- `tb`: tb whether top (true) or bottom (false) rotation
-
-# Returns
-- rotation of `p`
-"""
-function rotation(p::Partition, lr::Bool, tb::Bool)
-
-    if tb
-        @assert !isempty(p.upper_points) ["Got no partition reaching top"]
-    end
-    if !tb
-        @assert !isempty(p.lower_points) ["Got no partition reaching bottom"]
-    end
-
-    ret::Array = [copy(p.upper_points), copy(p.lower_points)]
-
-        if lr
-            if tb
-                a::Int = ret[1][1]
-                splice!(ret[1], 1)
-                pushfirst!(ret[2], a)
-            else
-                a = ret[2][1]
-                splice!(ret[2], 1)
-                pushfirst!(ret[1], a)
-            end
-        else
-            if tb
-                a = ret[1][end]
-                pop!(ret[1])
-                push!(ret[2], a)
-            else
-                a = ret[2][end]
-                pop!(ret[2])
-                push!(ret[1], a)
-            end
-        end
-    Partition(ret[1], ret[2])
 end
 
 """
@@ -319,114 +172,38 @@ composition(p, q)
 This function applies composition between p and q (in O(nlogn)).
 
 # Arguments
-- `p`: Input partition
-- `q`: Second input partition
+- `p`: Input Spatial partition
+- `q`: Second input spatial partition
 
 # Returns
 - `p` composition `q`
 """
-function composition(p::Partition, q::Partition)
+function composition(p::SpatialPartition, q::SpatialPartition)
 
-    @assert length(p.upper_points) == length(q.lower_points) ["format not fitting"]
+    @assert p.dimension == q.dimension "p and q have different dimensions in composition"
 
-    """Work with copies to not change the input partitions"""
-    p_copy::Partition = copy(p)
+    comp = composition(Partition(p.upper_points, p.lower_points), Partition(q.upper_points, q.lower_points))
 
-    """new_ids dicts store the new Value we need to assign to the partition in order to connect new segments"""
-    q_copy_new_ids::Partition = helper_new_point_values(p_copy, q)
-    new_ids::Dict{Int, Int} = Dict()
+    SpatialPartition(comp.upper_points, comp.lower_points, p.dimension)
 
-    """fitting the second partition-values to the first and changing if connection"""
-    for (i,n) in enumerate(q_copy_new_ids.lower_points)
-        if !(n in keys(new_ids))
-            new_ids[n] = p.upper_points[i]
-        else
-            if p.upper_points[i] in keys(new_ids) && get(new_ids, n, -1) in keys(new_ids)
-                """Do path compression if we have the case that we need to merge two tree's together and
-                the nodes we operate on are not a root or a leaf"""
-                for ii::Int in [n]
-                    path::Array = [ii]
-                    already_in = Set()
-                    push!(already_in, get(new_ids, ii, -1))
-                    z::Int = get(new_ids, ii, -1)
-                    while z::Int in keys(new_ids)
-                        push!(path, z)
-                        push!(already_in, z)
-                        z = get(new_ids, z, -1)
-                        if z in already_in
-                            break
-                        end
-                    end
-                    push!(path, z)
-                    for nn::Int in path[1:end-1]
-                        new_ids[nn] = path[end]
-                    end
-                end
-                new_ids[get(new_ids, n, -1)] = get(new_ids, p.upper_points[i], -1)
-            else
-                if !(get(new_ids, n, -1) in keys(new_ids))
-                    new_ids[get(new_ids, n, -1)] = p.upper_points[i]
-                else
-                    new_ids[p.upper_points[i]] = get(new_ids, n, 1)
-                end
-            end
-        end
-    end
-    
-    """final path compression"""
-    for ii in keys(new_ids)
-        path = [ii]
-        already_in = Set()
-        push!(already_in, get(new_ids, ii, -1))
-        z = get(new_ids, ii, -1)
-        while z in keys(new_ids)
-            push!(path, z)
-            push!(already_in, z)
-            z = get(new_ids, z, -1)
-            if z in already_in
-                break
-            end
-        end
-        push!(path, z)
-        for nn in path[1:end-1]
-            new_ids[nn] = path[end]
-        end
-    end
-    
-    """giving the top part new values"""
-    for (i,n) in enumerate(q_copy_new_ids.upper_points)
-        if n in keys(new_ids)
-            q_copy_new_ids.upper_points[i] = get(new_ids, n, -1)
-        end
-    end
-
-    """giving the top part new values"""
-    for (i,n) in enumerate(p_copy.lower_points)
-        if n in keys(new_ids)
-            p_copy.lower_points[i] = get(new_ids, n, -1)
-        end
-    end
-
-    """removing the middle by just changing the top of our partition to the adjusted top of the second partition"""
-    Partition(q_copy_new_ids.upper_points, p_copy.lower_points)
 end
 
 """
 size(p)
 
-This function outputs the size of the input partition (i.e. the number of points in `p`).
+This function outputs the size of the input spatial partition (i.e. the number of points in `p`).
 
 # Arguments
-- `p`: Input partition
+- `p`: Input spatial partition
 
 # Returns
 - size of `p`
 """
-function size(p::Partition)
+function size(p::SpatialPartition)
     length(p.lower_points) + length(p.upper_points)
 end
 
-function add_partition_to_dict(dict::Dict, p::Partition)::Dict
+function add_partition_to_dict(dict::Dict, p::SpatialPartition)
 
     add_apbs::Set = get(dict, size(p), -1)
     push!(add_apbs, p)
@@ -435,7 +212,7 @@ function add_partition_to_dict(dict::Dict, p::Partition)::Dict
     return dict
 end
 
-function add_partition_to_composition_dict(array::Array, p::Partition)::Array
+function add_partition_to_composition_dict(array::Array, p::SpatialPartition)
 
     """add right partition in first dict for top size"""
     add_apbs_top::Set = get(array[1], length(p.upper_points), -1)
@@ -458,39 +235,19 @@ function do_unary(
     max_length::Int, 
     all_partitions_by_size::Dict, 
     all_partitions_by_size_top_bottom::Array, 
-    trace::Dict)::Array
+    trace::Dict)
 
     stop::Bool = false
     while !stop
         stop = true
 
-        to_unary_copy::Set{Partition} = copy(to_unary)
+        to_unary_copy::Set{SpatialPartition} = copy(to_unary)
 
         for pp in to_unary_copy
             
-            pmod::Partition = copy(pp)
+            pmod::SpatialPartition = copy(pp)
 
-            a::Partition = Partition([], [])
-            """start with rotation"""
-            if !isempty(pmod.upper_points)
-                a = rotation(pmod, true, true)
-            elseif length(pmod.lower_points) > 0
-                a = rotation(pmod, false, false)
-            end
-
-            """add to all_partitions"""
-            if !(a in all_partitions)
-                trace[a] = tuple([pmod, "r"])
-                stop_whole = false
-                stop = false
-                push!(all_partitions, a)
-                push!(to_unary, a)
-
-                """call functions which adds the partition a into the right set in the dict"""
-                all_partitions_by_size = add_partition_to_dict(all_partitions_by_size, a)
-                all_partitions_by_size_top_bottom = add_partition_to_composition_dict(
-                        all_partitions_by_size_top_bottom, a)
-            end
+            a::SpatialPartition = SpatialPartition([], [], 0)
 
             """continue with involution"""
             a = involution(pmod)
@@ -509,23 +266,6 @@ function do_unary(
                         all_partitions_by_size_top_bottom, a)
             end
 
-            """end with involution y-axis"""
-            a = vertical_reflection(pmod)
-
-            """add to all_partitions"""
-            if !(a in all_partitions)
-                trace[a] = tuple([pmod, "vr"])
-                stop_whole = false
-                stop = false
-                push!(all_partitions, a)
-                push!(to_unary, a)
-
-                """call functions which adds the partition a into the right set in the dict"""
-                all_partitions_by_size = add_partition_to_dict(all_partitions_by_size, a)
-                all_partitions_by_size_top_bottom = add_partition_to_composition_dict(
-                        all_partitions_by_size_top_bottom, a)
-            end
-
             """remember already unary"""
             push!(already_u, pp)
             pop!(to_unary, pp)
@@ -533,7 +273,6 @@ function do_unary(
     end
 
     return [stop_whole, all_partitions, already_u, all_partitions_by_size, all_partitions_by_size_top_bottom, trace]
-
 end
 
 function do_tensor_products(
@@ -553,10 +292,10 @@ function do_tensor_products(
     end
 
     """store all partitions which are new constructed by tensor product"""
-    new_tens::Set{Partition} = Set()
+    new_tens::Set{SpatialPartition} = Set()
 
     """store for every i the ii's which are already used, to not use them in this iteration again"""
-    without::Dict{Partition, Set{Partition}} = Dict()
+    without::Dict{SpatialPartition, Set{SpatialPartition}} = Dict()
 
     """until no more new possibilities tensor"""
     stop::Bool = false
@@ -566,10 +305,10 @@ function do_tensor_products(
         """if there are new partitions due to tensor and size constraint, remove pair which are already 
         calculated """
         if !isempty(new_tens)
-            aa::Set{Partition} = union(new_tens, all_partitions)
+            aa::Set{SpatialPartition} = union(new_tens, all_partitions)
             for i in aa
                 """get fitting partitions in advance (improve runtime)"""
-                new_tens_temp_tensor::Set{Partition} = Set()
+                new_tens_temp_tensor::Set{SpatialPartition} = Set()
                 for key in keys(new_tens_by_size)
                     if size(i) + Int(key) <= max_length
                         new_tens_temp_tensor = union(new_tens_temp_tensor, get(new_tens_by_size, key, -1)::Set)
@@ -596,7 +335,7 @@ function do_tensor_products(
         """do the tensor products"""
         al::Set = copy(to_tens)
         for (i, ii) in al
-            a::Partition = tensor_product(i, ii)
+            a::SpatialPartition = tensor_product(i, ii)
             pop!(to_tens, [i, ii])
             if !(a in all_partitions)
                 trace[a] = ((i, ii), "t")
@@ -646,7 +385,7 @@ function do_composition(
     trace::Dict)::Array
 
     """add newfound partitions due comp"""
-    new_comp::Set{Partition} = Set()
+    new_comp::Set{SpatialPartition} = Set()
 
     """new_comp stored in tuple with a dict for top and bottom size (analogical to the technique in build function)"""
     new_comp_by_size_top_bottom = [Dict(), Dict()]
@@ -656,7 +395,7 @@ function do_composition(
     end
 
     """store for every i the ii's which are already used, to not use them in this iteration again"""
-    without::Dict{Partition, Set{Partition}} = Dict()
+    without::Dict{SpatialPartition, Set{SpatialPartition}} = Dict()
 
     """until no more new possibilities compose"""
     stop::Bool = false
@@ -730,46 +469,59 @@ function do_composition(
     return [all_partitions, already_c, stop_whole, all_partitions_by_size, all_partitions_by_size_top_bottom, trace]
 end
 
+
 """
 construct_category(p::Array, n::Int, tracing::Bool = false, max_artifical::Int = 0)
 
-This function outputs list of all partitions size n constructed from partitions in p (without using partitions of size
+This function outputs list of all spatial partitions size n constructed from partitions in p (without using spatial partitions of size
 greater than max(max(n, max(p)), max_artifical))
 
 # Arguments
-- `p`: list of partitions
-- `n`: size of partitions in constructing category
+- `p`: list of spatial partitions
+- `n`: size of spatial partitions in constructing category
 - `tracing`: optinal input: activate tracing and get the output (category, trace)
-- `max_artifical`: optional input: allow partitions to grow greater while construction process
+- `max_artifical`: optional input: allow spatial partitions to grow greater while construction process
 
 # Returns
 - list of all partitions size n constructed from partitions in p
 """
 function construct_category(p::Array, n::Int, tracing::Bool = false, max_artificial::Int = 0)
 
-    """store all candidates found"""
-    all_partitions::Set{Partition} = Set([Partition([1, 1], []), Partition([1], [1])])
+    """store all candidates found + base partitions to m = 3"""
+    all_partitions = Set()
+    dim = 0
+    if !isempty(p)
+        dim = p[1].dimension
+        for i in p
+            @assert i.dimension == dim "all input partitions need same dimension"
+        end
+    end
+    
+
+    """add spatial base partitions to our set"""
+    push!(all_partitions, SpatialPartition([i for i in 1:dim], [i for i in 1:dim], dim))
+    push!(all_partitions, SpatialPartition([], vcat([i for i in 1:dim], [i for i in 1:dim]), dim))
 
     """all candidates stored in dict from size to partition"""
-    all_partitions_by_size::Dict{Int, Set{Partition}} = Dict()
+    all_partitions_by_size::Dict{Int, Set{SpatialPartition}} = Dict()
 
     """all candidates stored in tuple with a dict for top and bottom size"""
     all_partitions_by_size_top_bottom::Array = [Dict(), Dict()]
 
     """store partitions already unary"""
-    already_u::Set{Partition} = Set()
+    already_u::Set{SpatialPartition} = Set()
 
     """store partitions already tensor product"""
-    already_t::Set{Array{Partition}} = Set()
+    already_t::Set{Array{SpatialPartition}} = Set()
 
     """store partitions already composition"""
-    already_c::Set{Array{Partition}} = Set()
+    already_c::Set{Array{SpatialPartition}} = Set()
 
     """end output: All partitions found of size n """
-    all_partitions_of_size_n::Set{Partition} = Set()
+    all_partitions_of_size_n::Set{SpatialPartition} = Set()
 
     """all candidates for unary operations"""
-    to_unary::Set{Partition} = Set(copy(p))
+    to_unary::Set{SpatialPartition} = Set(copy(p))
 
     """trace for tracing"""
     trace::Dict = Dict()
@@ -778,7 +530,7 @@ function construct_category(p::Array, n::Int, tracing::Bool = false, max_artific
     max_length::Int = n
 
     """get max length of a partition"""
-    for i in vcat(p, [Partition([1], [1])])
+    for i in vcat(p, [SpatialPartition([i for i in 1:dim], [i for i in 1:dim], dim)])
         if size(i) > max_length
             max_length = size(i)
         end
@@ -893,22 +645,13 @@ function construct_category(p::Array, n::Int, tracing::Bool = false, max_artific
     return partitions
 end
 
-function get_trace(trace::Dict, start)
-    """track the trace with breath first search"""
+a = SpatialPartition([], [1, 1], 2)
+b = SpatialPartition([1, 2, 1, 3], [4, 2, 4, 3], 2)
 
-    if !(start in keys(trace))
-        print("(spatial) Partition $(start) not found in trace")
-    end
+c = SpatialPartition([1, 2, 3, 2], [1, 4, 3, 4], 2)
+dd = SpatialPartition([1, 2, 3, 4], [3, 2, 1, 4], 2)
 
-    track = [start]
-    for p in track
-        if p in keys(trace)
-            println(p, " : ", get(trace, p, -1))
-            for i in get(trace, p, -1)[1]
-                if !(typeof(i) <: AbstractString) && !(i in track)
-                    push!(track, i)
-                end
-            end
-        end
-    end
-end
+(p, t) = construct_category([a, c, dd], 8, true, 10)
+
+get_trace(t, b)
+println("..............................")
