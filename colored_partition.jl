@@ -5,58 +5,60 @@ using InteractiveUtils
 include("partition.jl")
 
 """
-SpatialPartition
+ColoredPartition
 
-Initialize Spatial Partition object
+Initialize colored Partition object
 
 # Arguments
-- `upper_points`: upper points of Spatial Partition as array
-- `lower_points`: lower points of Spatial Partition as array 
-- `dimension`: dimension of the spatial Partition
-- `normal_form`: optional input, transforms to normal form if true, else spatial partition syntax remains
+- `upper_points`: upper points of colored Partition as array
+- `lower_points`: lower points of coloredPartition as array
+- `color_upper_points`: color (in [0, 1]) of upper points
+- `color_lower_points`: color (in [0, 1]) of lower points
+- `normal_form`: optional input, transforms to normal form if true, else colored partition syntax remains
 """
-struct SpatialPartition
+struct ColoredPartition
     upper_points::Array{Int64, 1}
     lower_points::Array{Int64, 1}
-    dimension::Int64
+    color_upper_points::Array{Int64, 1}
+    color_lower_points::Array{Int64, 1}
 
-    function SpatialPartition(upper_points::AbstractArray, lower_points::AbstractArray, dimension::Int64, normal_form::Bool = true)
+    function ColoredPartition(upper_points::AbstractArray, lower_points::AbstractArray, color_upper_points::AbstractArray, color_lower_points::AbstractArray, normal_form::Bool = true)
         if normal_form
             (upper_points, lower_points) = normal_form_array([Int64.(upper_points), Int64.(lower_points)])
         end
-        return new(upper_points, lower_points, dimension)
+        return new(upper_points, lower_points, color_upper_points, color_lower_points)
     end
 end
 
-function hash(p::SpatialPartition)
+function hash(p::ColoredPartition)
 
-    hash([hash(p.upper_points), hash(p.lower_points), hash(p.dimension)])
+    hash([hash(p.upper_points), hash(p.lower_points), hash(p.color_upper_points), hash(p.color_lower_points)])
     
 end
 
-function ==(p::SpatialPartition, q::SpatialPartition)
+function ==(p::ColoredPartition, q::ColoredPartition)
 
-    p.lower_points == q.lower_points && p.upper_points == q.upper_points && p.dimension == q.dimension
+    p.lower_points == q.lower_points && p.upper_points == q.upper_points && p.color_upper_points == q.color_upper_points && p.color_lower_points == q.color_lower_points
 
 end
 
-function copy(p::SpatialPartition)
-    return SpatialPartition(copy(p.upper_points), copy(p.lower_points), copy(p.dimension))
+function copy(p::ColoredPartition)
+    return ColoredPartition(copy(p.upper_points), copy(p.lower_points), copy(p.color_upper_points), copy(p.color_lower_points))
 end
 
 """
 helper_new_point_values(x)
 
-This function outputs a semantically identical Partition which has new number values (in O(n)).
+This function outputs a semantically identical colored Partition which has new number values (in O(n)).
 
 # Arguments
-- `p`: The input partition which we do not change
-- `q`: The input partition that we change according to the values of p
+- `p`: The input colored partition which we do not change
+- `q`: The input colored partition that we change according to the values of p
 
 # Returns
-- Semantically equal partition to q without point numbers in p
+- Semantically equal colored partition to q without point numbers in p
 """
-function helper_new_point_values(p::SpatialPartition, q::SpatialPartition)
+function helper_new_point_values(p::ColoredPartition, q::ColoredPartition)
 
     p_points::Array{Int} = vcat(copy(p.upper_points), copy(p.lower_points))
 
@@ -85,27 +87,27 @@ function helper_new_point_values(p::SpatialPartition, q::SpatialPartition)
         push!(lower, get(new_ids, n, -1)::Int)
     end
 
-    SpatialPartition(upper, lower, q.dimension, false)
+    ColoredPartition(upper, lower, copy(q.color_upper_points), copy(q.color_lower_points), false)
     
 end
 
 """
 normal_form(x)
 
-This function outputs a semantically identical Partition which has new number values from 1 to number of blocks of Partitions (in O(n)).
-**not needed because we already correct the Partition to the correct form in the constructor**
+This function outputs a semantically identical colored Partition which has new number values from 1 to number of blocks of Partitions (in O(n)).
+**not needed because we already correct the colored Partition to the correct form in the constructor**
 
 # Arguments
-- `p`: Input partition
+- `p`: Input colored partition
 
 # Returns
 - `p` with consisten form
 """
-function normal_form(p::SpatialPartition)
+function normal_form(p::ColoredPartition)
 
     new_id::Int = 1
     new_ids::Dict{Int, Int} = Dict()
-    p::SpatialPartition = helper_new_point_values(SpatialPartition([length(p.upper_points) + length(p.lower_points)], [], p.dimension), p)
+    p::ColoredPartition = helper_new_point_values(ColoredPartition([length(p.upper_points) + length(p.lower_points)], p.color_upper_points, p.color_lower_points), p)
 
     for (i, n) in enumerate(p.upper_points)
         if !(n in keys(new_ids))
@@ -129,25 +131,24 @@ function normal_form(p::SpatialPartition)
     p
 end
 
+
 """
 tensor_product(p, q)
 
 This function applies on p tensor product with q (in O(n)).
 
 # Arguments
-- `p`: Input Spatial partition
-- `q`: Second input Spatial partition
+- `p`: Input colored partition
+- `q`: Second input colored partition
 
 # Returns
 - `p` tensor product `q`
 """
-function tensor_product(p::SpatialPartition, q::SpatialPartition)
-
-    @assert p.dimension == q.dimension "p and q have different dimensions in tensor product"
+function tensor_product(p::ColoredPartition, q::ColoredPartition)
 
     q_new = helper_new_point_values(p, q)
 
-    SpatialPartition(vcat(p.upper_points, q_new.upper_points), vcat(p.lower_points, q_new.lower_points), p.dimension)
+    ColoredPartition(vcat(p.upper_points, q_new.upper_points), vcat(p.lower_points, q_new.lower_points), vcat(p.color_upper_points, q_new.color_upper_points), vcat(p.color_lower_points, q_new.color_lower_points))
 end
 
 """
@@ -156,14 +157,14 @@ involution(p)
 This function applies an involution on `p` (in O(n) because normal_form, else O(1)).
 
 # Arguments
-- `p`: Input spatial partition
+- `p`: Input colored partition
 
 # Returns
 - involution of `p`
 """
-function involution(p::SpatialPartition)
+function involution(p::ColoredPartition)
 
-    SpatialPartition(copy(p.lower_points), copy(p.upper_points), p.dimension)
+    ColoredPartition(copy(p.lower_points), copy(p.upper_points), copy(p.color_lower_points), copy(p.color_upper_points))
 
 end
 
@@ -173,38 +174,103 @@ composition(p, q)
 This function applies composition between p and q (in O(nlogn)).
 
 # Arguments
-- `p`: Input Spatial partition
-- `q`: Second input spatial partition
+- `p`: Input colored partition
+- `q`: Second input colored partition
 
 # Returns
 - `p` composition `q`
 """
-function composition(p::SpatialPartition, q::SpatialPartition)
+function composition(p::ColoredPartition, q::ColoredPartition)
 
-    @assert p.dimension == q.dimension "p and q have different dimensions in composition"
+    @assert p.color_upper_points == q.color_lower_points "p upper and q lower colors are different in composition"
 
     comp = composition(Partition(p.upper_points, p.lower_points), Partition(q.upper_points, q.lower_points))
 
-    SpatialPartition(comp.upper_points, comp.lower_points, p.dimension)
+    ColoredPartition(comp.upper_points, comp.lower_points, q.color_upper_points, p.color_lower_points)
 
 end
+
+"""
+rotation(x)
+
+This function applies a rotation on `p` (in O(n) because normal_form, else O(1)). 
+
+# Arguments
+- `p`: Input colored partition
+- `lr`: lr whether left (true) or right (false)
+- `tb`: tb whether top (true) or bottom (false) rotation
+
+# Returns
+- rotation of `p`
+"""
+function rotation(p::ColoredPartition, lr::Bool, tb::Bool)
+
+    if tb
+        @assert !isempty(p.upper_points) ["Got no partition reaching top"]
+    end
+    if !tb
+        @assert !isempty(p.lower_points) ["Got no partition reaching bottom"]
+    end
+
+    ret::Array = [copy(p.upper_points), copy(p.lower_points), copy(p.color_upper_points), copy(p.color_lower_points)]
+
+        if lr
+            if tb
+                a::Int = ret[1][1]
+                splice!(ret[1], 1)
+                pushfirst!(ret[2], a)
+
+                a = ret[3][1]
+                splice!(ret[3], 1)
+                pushfirst!(ret[4], Int(!Bool(a)))
+            else
+                a = ret[2][1]
+                splice!(ret[2], 1)
+                pushfirst!(ret[1], a)
+
+                a = ret[4][1]
+                splice!(ret[4], 1)
+                pushfirst!(ret[3], Int(!Bool(a)))
+            end
+        else
+            if tb
+                a = ret[1][end]
+                pop!(ret[1])
+                push!(ret[2], a)
+
+                a = ret[3][end]
+                pop!(ret[3])
+                push!(ret[4], Int(!Bool(a)))
+            else
+                a = ret[2][end]
+                pop!(ret[2])
+                push!(ret[1], a)
+
+                a = ret[4][end]
+                pop!(ret[4])
+                push!(ret[3], Int(!Bool(a)))
+            end
+        end
+    ColoredPartition(ret[1], ret[2], ret[3], ret[4])
+end
+
 
 """
 size(p)
 
-This function outputs the size of the input spatial partition (i.e. the number of points in `p`).
+This function outputs the size of the input colroed partition (i.e. the number of points in `p`).
 
 # Arguments
-- `p`: Input spatial partition
+- `p`: Input colored partition
 
 # Returns
 - size of `p`
 """
-function size(p::SpatialPartition)
+function size(p::ColoredPartition)
     length(p.lower_points) + length(p.upper_points)
 end
 
-function add_partition_to_dict(dict::Dict, p::SpatialPartition)
+function add_partition_to_dict(dict::Dict, p::ColoredPartition)
 
     add_apbs::Set = get(dict, size(p), -1)
     push!(add_apbs, p)
@@ -213,7 +279,7 @@ function add_partition_to_dict(dict::Dict, p::SpatialPartition)
     return dict
 end
 
-function add_partition_to_composition_dict(array::Array, p::SpatialPartition)
+function add_partition_to_composition_dict(array::Array, p::ColoredPartition)
 
     """add right partition in first dict for top size"""
     add_apbs_top::Set = get(array[1], length(p.upper_points), -1)
@@ -236,19 +302,39 @@ function do_unary(
     max_length::Int, 
     all_partitions_by_size::Dict, 
     all_partitions_by_size_top_bottom::Array, 
-    trace::Dict)
+    trace::Dict)::Array
 
     stop::Bool = false
     while !stop
         stop = true
 
-        to_unary_copy::Set{SpatialPartition} = copy(to_unary)
+        to_unary_copy::Set{ColoredPartition} = copy(to_unary)
 
         for pp in to_unary_copy
             
-            pmod::SpatialPartition = copy(pp)
+            pmod::ColoredPartition = copy(pp)
 
-            a::SpatialPartition = SpatialPartition([], [], 0)
+            a::ColoredPartition = ColoredPartition([], [], [], [])
+            """start with rotation"""
+            if !isempty(pmod.upper_points)
+                a = rotation(pmod, true, true)
+            elseif length(pmod.lower_points) > 0
+                a = rotation(pmod, false, false)
+            end
+
+            """add to all_partitions"""
+            if !(a in all_partitions)
+                trace[a] = tuple([pmod, "r"])
+                stop_whole = false
+                stop = false
+                push!(all_partitions, a)
+                push!(to_unary, a)
+
+                """call functions which adds the partition a into the right set in the dict"""
+                all_partitions_by_size = add_partition_to_dict(all_partitions_by_size, a)
+                all_partitions_by_size_top_bottom = add_partition_to_composition_dict(
+                        all_partitions_by_size_top_bottom, a)
+            end
 
             """continue with involution"""
             a = involution(pmod)
@@ -274,6 +360,7 @@ function do_unary(
     end
 
     return [stop_whole, all_partitions, already_u, all_partitions_by_size, all_partitions_by_size_top_bottom, trace]
+
 end
 
 function do_tensor_products(
@@ -293,10 +380,10 @@ function do_tensor_products(
     end
 
     """store all partitions which are new constructed by tensor product"""
-    new_tens::Set{SpatialPartition} = Set()
+    new_tens::Set{ColoredPartition} = Set()
 
     """store for every i the ii's which are already used, to not use them in this iteration again"""
-    without::Dict{SpatialPartition, Set{SpatialPartition}} = Dict()
+    without::Dict{ColoredPartition, Set{ColoredPartition}} = Dict()
 
     """until no more new possibilities tensor"""
     stop::Bool = false
@@ -306,10 +393,10 @@ function do_tensor_products(
         """if there are new partitions due to tensor and size constraint, remove pair which are already 
         calculated """
         if !isempty(new_tens)
-            aa::Set{SpatialPartition} = union(new_tens, all_partitions)
+            aa::Set{ColoredPartition} = union(new_tens, all_partitions)
             for i in aa
                 """get fitting partitions in advance (improve runtime)"""
-                new_tens_temp_tensor::Set{SpatialPartition} = Set()
+                new_tens_temp_tensor::Set{ColoredPartition} = Set()
                 for key in keys(new_tens_by_size)
                     if size(i) + Int(key) <= max_length
                         new_tens_temp_tensor = union(new_tens_temp_tensor, get(new_tens_by_size, key, -1)::Set)
@@ -336,7 +423,7 @@ function do_tensor_products(
         """do the tensor products"""
         al::Set = copy(to_tens)
         for (i, ii) in al
-            a::SpatialPartition = tensor_product(i, ii)
+            a::ColoredPartition = tensor_product(i, ii)
             pop!(to_tens, [i, ii])
             if !(a in all_partitions)
                 trace[a] = ((i, ii), "t")
@@ -386,7 +473,7 @@ function do_composition(
     trace::Dict)::Array
 
     """add newfound partitions due comp"""
-    new_comp::Set{SpatialPartition} = Set()
+    new_comp::Set{ColoredPartition} = Set()
 
     """new_comp stored in tuple with a dict for top and bottom size (analogical to the technique in build function)"""
     new_comp_by_size_top_bottom = [Dict(), Dict()]
@@ -396,7 +483,7 @@ function do_composition(
     end
 
     """store for every i the ii's which are already used, to not use them in this iteration again"""
-    without::Dict{SpatialPartition, Set{SpatialPartition}} = Dict()
+    without::Dict{ColoredPartition, Set{ColoredPartition}} = Dict()
 
     """until no more new possibilities compose"""
     stop::Bool = false
@@ -413,22 +500,22 @@ function do_composition(
                 end
                 if i in keys(without)
                     for ii in setdiff(new_comp_temp_comp, get(without, i, -1))
-                        if length(i.upper_points) == length(ii.lower_points) && length(i.upper_points) != 0 && length(i.upper_points) != max_length && length(i.lower_points) + length(ii.upper_points) <= max_length
+                        if length(i.upper_points) == length(ii.lower_points) && length(i.upper_points) != 0 && length(i.upper_points) != max_length && length(i.lower_points) + length(ii.upper_points) <= max_length && i.color_upper_points == ii.color_lower_points
                             push!(to_comp, [i, ii])
                             push!(already_c, [i, ii])
                         end
-                        if length(ii.upper_points) == length(i.lower_points) && length(ii.upper_points) != 0 && length(ii.upper_points) != max_length && length(ii.lower_points) + length(i.upper_points) <= max_length
+                        if length(ii.upper_points) == length(i.lower_points) && length(ii.upper_points) != 0 && length(ii.upper_points) != max_length && length(ii.lower_points) + length(i.upper_points) <= max_length && i.color_lower_points == ii.color_upper_points
                             push!(to_comp, [ii, i])
                             push!(already_c, [ii, i])
                         end
                     end
                 else
                     for ii in new_comp_temp_comp
-                        if length(i.upper_points) == length(ii.lower_points) && length(i.upper_points) != 0 && length(i.upper_points) != max_length && length(i.lower_points) + length(ii.upper_points) <= max_length
+                        if length(i.upper_points) == length(ii.lower_points) && length(i.upper_points) != 0 && length(i.upper_points) != max_length && length(i.lower_points) + length(ii.upper_points) <= max_length && i.color_upper_points == ii.color_lower_points
                             push!(to_comp, [i, ii])
                             push!(already_c, [i, ii])
                         end
-                        if length(ii.upper_points) == length(i.lower_points) && length(ii.upper_points) != 0 && length(ii.upper_points) != max_length && length(ii.lower_points) + length(i.upper_points) <= max_length
+                        if length(ii.upper_points) == length(i.lower_points) && length(ii.upper_points) != 0 && length(ii.upper_points) != max_length && length(ii.lower_points) + length(i.upper_points) <= max_length && i.color_lower_points == ii.color_upper_points
                             push!(to_comp, [ii, i])
                             push!(already_c, [ii, i])
                         end
@@ -470,59 +557,46 @@ function do_composition(
     return [all_partitions, already_c, stop_whole, all_partitions_by_size, all_partitions_by_size_top_bottom, trace]
 end
 
-
 """
 construct_category(p::Array, n::Int, tracing::Bool = false, max_artifical::Int = 0)
 
-This function outputs list of all spatial partitions size n constructed from partitions in p (without using spatial partitions of size
+This function outputs list of all partitions size n constructed from partitions in p (without using partitions of size
 greater than max(max(n, max(p)), max_artifical))
 
 # Arguments
-- `p`: list of spatial partitions
-- `n`: size of spatial partitions in constructing category
+- `p`: list of partitions
+- `n`: size of partitions in constructing category
 - `tracing`: optinal input: activate tracing and get the output (category, trace)
-- `max_artifical`: optional input: allow spatial partitions to grow greater while construction process
+- `max_artifical`: optional input: allow partitions to grow greater while construction process
 
 # Returns
 - list of all partitions size n constructed from partitions in p
 """
 function construct_category(p::Array, n::Int, tracing::Bool = false, max_artificial::Int = 0)
 
-    """store all candidates found + base partitions to m = 3"""
-    all_partitions = Set()
-    dim = 0
-    if !isempty(p)
-        dim = p[1].dimension
-        for i in p
-            @assert i.dimension == dim "all input partitions need same dimension"
-        end
-    end
-    
-
-    """add spatial base partitions to our set"""
-    push!(all_partitions, SpatialPartition([i for i in 1:dim], [i for i in 1:dim], dim))
-    push!(all_partitions, SpatialPartition([], vcat([i for i in 1:dim], [i for i in 1:dim]), dim))
+    """store all candidates found"""
+    all_partitions = Set([ColoredPartition([1], [1], [0], [0]), ColoredPartition([1], [1], [1], [1]), ColoredPartition([1, 1], [], [0, 1], []), ColoredPartition([1, 1], [], [1, 0], []), ColoredPartition([], [], [], [])])
 
     """all candidates stored in dict from size to partition"""
-    all_partitions_by_size::Dict{Int, Set{SpatialPartition}} = Dict()
+    all_partitions_by_size::Dict{Int, Set{ColoredPartition}} = Dict()
 
     """all candidates stored in tuple with a dict for top and bottom size"""
     all_partitions_by_size_top_bottom::Array = [Dict(), Dict()]
 
     """store partitions already unary"""
-    already_u::Set{SpatialPartition} = Set()
+    already_u::Set{ColoredPartition} = Set()
 
     """store partitions already tensor product"""
-    already_t::Set{Array{SpatialPartition}} = Set()
+    already_t::Set{Array{ColoredPartition}} = Set()
 
     """store partitions already composition"""
-    already_c::Set{Array{SpatialPartition}} = Set()
+    already_c::Set{Array{ColoredPartition}} = Set()
 
     """end output: All partitions found of size n """
-    all_partitions_of_size_n::Set{SpatialPartition} = Set()
+    all_partitions_of_size_n::Set{ColoredPartition} = Set()
 
     """all candidates for unary operations"""
-    to_unary::Set{SpatialPartition} = Set(copy(p))
+    to_unary::Set{ColoredPartition} = Set(copy(p))
 
     """trace for tracing"""
     trace::Dict = Dict()
@@ -531,7 +605,7 @@ function construct_category(p::Array, n::Int, tracing::Bool = false, max_artific
     max_length::Int = n
 
     """get max length of a partition"""
-    for i in vcat(p, [SpatialPartition([i for i in 1:dim], [i for i in 1:dim], dim)])
+    for i in vcat(p, [ColoredPartition([1], [1], [0], [0])])
         if size(i) > max_length
             max_length = size(i)
         end
@@ -611,7 +685,7 @@ function construct_category(p::Array, n::Int, tracing::Bool = false, max_artific
             all_partitions_temp_comp = get(all_partitions_by_size_top_bottom[2], length(i.upper_points), -1)
             for ii in all_partitions_temp_comp
                 if !((i, ii) in already_c)
-                    if length(i.upper_points) == length(ii.lower_points) && length(i.upper_points) != 0 && length(i.upper_points) != max_length && length(i.lower_points) + length(ii.upper_points) <= max_length
+                    if length(i.upper_points) == length(ii.lower_points) && length(i.upper_points) != 0 && length(i.upper_points) != max_length && length(i.lower_points) + length(ii.upper_points) <= max_length && i.color_upper_points == ii.color_lower_points 
                         push!(to_comp, [i, ii])
                         push!(already_c, [i, ii])
                     end
@@ -646,13 +720,8 @@ function construct_category(p::Array, n::Int, tracing::Bool = false, max_artific
     return partitions
 end
 
-a = SpatialPartition([], [1, 1], 2)
-b = SpatialPartition([1, 2, 1, 3], [4, 2, 4, 3], 2)
+aa = ColoredPartition([2, 2, 3], [2, 2, 2], [1, 0, 1], [1, 1, 0])
 
-c = SpatialPartition([1, 2, 3, 2], [1, 4, 3, 4], 2)
-dd = SpatialPartition([1, 2, 3, 4], [3, 2, 1, 4], 2)
+b = ColoredPartition([1, 2, 3], [2, 2, 2], [1, 0, 1], [1, 0, 1])
 
-(p, t) = construct_category([a, c, dd], 8, true, 10)
-
-get_trace(t, b)
-println("..............................")
+println(length(construct_category([ColoredPartition([1], [1], [1], [0])], 6)))
