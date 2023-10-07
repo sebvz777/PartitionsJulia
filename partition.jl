@@ -321,11 +321,12 @@ This function applies composition between p and q (in O(nlogn)).
 # Arguments
 - `p`: Input partition
 - `q`: Second input partition
+- `loop`: optional input: by default false
 
 # Returns
-- `p` composition `q`
+- `p` composition `q` if loop == false, else [`p` composition `q`, number of loops]
 """
-function composition(p::Partition, q::Partition)
+function composition(p::Partition, q::Partition, loop::Bool = false)
 
     @assert length(p.upper_points) == length(q.lower_points) ["format not fitting"]
 
@@ -408,7 +409,37 @@ function composition(p::Partition, q::Partition)
     end
 
     """removing the middle by just changing the top of our partition to the adjusted top of the second partition"""
-    Partition(q_copy_new_ids.upper_points, p_copy.lower_points)
+    ret = Partition(q_copy_new_ids.upper_points, p_copy.lower_points)
+
+    """calculating removed related components (loop)"""
+        if loop
+            related_comp = Set()
+            return_partition_as_set = Set(vcat(q_copy_new_ids.upper_points, p_copy.lower_points))
+
+            """calculate new ids for middle nodes, which are under normal circumstances omitted"""
+            for (i, n) in enumerate(q_copy_new_ids.lower_points)
+                if n in keys(new_ids)
+                    q_copy_new_ids.lower_points[i] = get(new_ids, n, -1)
+                end
+            end
+
+            for (i, n) in enumerate(p_copy.upper_points)
+                if n in keys(new_ids)
+                    p.upper_points[i] = get(new_ids, n, -1)
+                end
+            end
+
+            """if there is a ID in the middle part which is not in result partition set we know, that this is a loop"""
+            for co in vcat(q_copy_new_ids.lower_points, p_copy.upper_points)
+                if !(co in return_partition_as_set)
+                    push!(related_comp, co)
+                end
+            end
+
+            return [ret, length(related_comp)]
+        end
+
+    ret
 end
 
 """
