@@ -223,6 +223,12 @@ This function applies on p tensor product with q (in O(n)).
 
 # Returns
 - `p` tensor product `q`
+
+# Examples
+```julia-repl
+julia> tensor_product(Partition([1, 2], [2, 1]), Partition([1, 1], [1]))
+Partition([1, 2, 3, 3], [2, 1, 3])
+```
 """
 function tensor_product(p::Partition, q::Partition)
 
@@ -241,6 +247,12 @@ This function applies an involution on `p` (in O(n) because normal_form, else O(
 
 # Returns
 - involution of `p`
+
+# Examples
+```julia-repl
+julia> involution(Partition([1, 2, 3], [2, 1]))
+Partition([1, 2], [2, 1, 3])
+```
 """
 function involution(p::Partition)
 
@@ -258,6 +270,12 @@ This function applies an vertical reflection on `p` (in O(n) because normal_form
 
 # Returns
 - vertical reflection of `p`
+
+# Examples
+```julia-repl
+julia> vertical_reflection(Partition([1, 2, 3], [2, 1]))
+Partition([1, 2, 3], [3, 2])
+```
 """
 function vertical_reflection(p::Partition)
 
@@ -277,6 +295,12 @@ This function applies a rotation on `p` (in O(n) because normal_form, else O(1))
 
 # Returns
 - rotation of `p`
+
+# Examples
+```julia-repl
+julia> rotation(Partition([1, 2, 3], [2, 1]), true, true)
+Partition([1, 2], [3, 1, 3])
+```
 """
 function rotation(p::Partition, lr::Bool, tb::Bool)
 
@@ -325,6 +349,12 @@ This function applies composition between p and q (in O(nlogn)).
 
 # Returns
 - `p` composition `q` if loop == false, else [`p` composition `q`, number of loops]
+
+# Examples
+```julia-repl
+julia> composition(Partition([1, 2], [2, 1]), Partition([1], [1, 1]))
+Partition([1], [1, 1])
+```
 """
 function composition(p::Partition, q::Partition, loop::Bool = false)
 
@@ -775,6 +805,14 @@ greater than max(max(n, max(p)), max_artifical))
 
 # Returns
 - list of all partitions size n constructed from partitions in p
+
+# Examples
+```julia-repl
+julia> length(construct_category([Partition([1, 2], [2, 1])], 6))
+105
+julia> length(construct_category([Partition([1, 2], [2, 1])], 6, true))
+[<Partition([1, 2], [2, 1])> ∩ P(6), Dict{Partition -> Tuple}]
+```
 """
 function construct_category(p::Array, n::Int, tracing::Bool = false, max_artificial::Int = 0)
 
@@ -867,11 +905,9 @@ function construct_category(p::Array, n::Int, tracing::Bool = false, max_artific
                 end
             end
             for ii in all_partitions_temp_tensor
-                if !((i, ii) in already_t)
-                    if length(i.upper_points) + length(i.lower_points) + length(ii.upper_points) + length(ii.lower_points) <= max_length
-                        push!(to_tens, [i, ii])
-                        push!(already_t, [i, ii])
-                    end
+                if !((i, ii) in already_t) && (length(i.upper_points) + length(i.lower_points) + length(ii.upper_points) + length(ii.lower_points) <= max_length)
+                    push!(to_tens, [i, ii])
+                    push!(already_t, [i, ii])
                 end
             end
         end
@@ -888,11 +924,9 @@ function construct_category(p::Array, n::Int, tracing::Bool = false, max_artific
             """get in advance the right second candidate (regarding format)"""
             all_partitions_temp_comp = get(all_partitions_by_size_top_bottom[2], length(i.upper_points), -1)
             for ii in all_partitions_temp_comp
-                if !((i, ii) in already_c)
-                    if length(i.upper_points) == length(ii.lower_points) && length(i.upper_points) != 0 && length(i.upper_points) != max_length && length(i.lower_points) + length(ii.upper_points) <= max_length
-                        push!(to_comp, [i, ii])
-                        push!(already_c, [i, ii])
-                    end
+                if !((i, ii) in already_c) && (length(i.upper_points) == length(ii.lower_points) && length(i.upper_points) != 0 && length(i.upper_points) != max_length && length(i.lower_points) + length(ii.upper_points) <= max_length)
+                    push!(to_comp, [i, ii])
+                    push!(already_c, [i, ii])
                 end
             end
         end
@@ -903,10 +937,8 @@ function construct_category(p::Array, n::Int, tracing::Bool = false, max_artific
 
     """remove all partitions without size n"""
     for i in all_partitions
-        if size(i) == n
-            if !(i in all_partitions_of_size_n)
-                push!(all_partitions_of_size_n, i)
-            end
+        if size(i) == n && !(i in all_partitions_of_size_n)
+            push!(all_partitions_of_size_n, i)
         end
     end
 
@@ -924,6 +956,13 @@ function construct_category(p::Array, n::Int, tracing::Bool = false, max_artific
     return partitions
 end
 
+"""
+get_trace(trace::Dict, start::Partition)
+
+This function prints out the trace of the partition `start` constructed with `construct_category`
+(via breath first search)
+
+"""
 function get_trace(trace::Dict, start)
     """track the trace with breath first search"""
 
@@ -942,4 +981,157 @@ function get_trace(trace::Dict, start)
             end
         end
     end
+end
+
+"""
+check_pair(p::Partition)
+
+This function checks whether `p` is a partition only including blocks of size two (in O(n) average).
+
+# Arguments
+- `p`: Input partition
+
+# Returns
+- true if `p` is pair partition else false
+
+# Examples
+```julia-repl
+julia> check_pair(Partition([1, 2, 2, 1, 3], [3]))
+true
+```
+"""
+function check_pair(p::Partition)
+
+    """Dictionary from block to size of block"""
+    block_to_size = Dict()
+
+    """Initialize dictionary"""
+    for i in vcat(p.upper_points, p.lower_points)
+        if !(i in keys(block_to_size))
+            block_to_size[i] = 1
+        else
+            block_to_size[i] = get(block_to_size, i, -1) + 1
+            if get(block_to_size, i, -1) > 2
+                return false
+            end
+        end
+    end
+    true
+end
+
+"""
+check_pair(p::Partition)
+
+This function checks whether `p` is a balanced partition (in O(n) average).
+
+# Arguments
+- `p`: Input partition
+
+# Returns
+- true if `p` is balanced partition else false
+
+# Examples
+```julia-repl
+julia> check_balanced(Partition([1, 2, 3], [3, 2, 1]))
+true
+```
+"""
+function check_balanced(p::Partition)
+
+    p_array = vcat(p.upper_points, p.lower_points)
+
+    """Dictionary from block to sum of -1 (repr odd indices) and 1 (repr even indices)"""
+    block_to_size = Dict()
+
+    """prefill dict with zeros"""
+    for i in 1:findmax(p_array)[1]
+        block_to_size[i] = 0
+    end
+
+    """Initialize dictionary"""
+    for (i, n) in enumerate(p_array)
+        if i % 2 == 1
+            block_to_size[n] = get(block_to_size, n, -1) - 1
+        else
+            block_to_size[n] = get(block_to_size, n, -1) + 1
+        end
+    end
+
+    for i in values(block_to_size)
+        if i != 0
+            return false
+        end
+    end
+    true
+end
+
+"""
+check_nc(p::Partition)
+
+This function checks whether `p` is a non-crossing partition (in O(n) average).
+
+# Arguments
+- `p`: Input partition
+
+# Returns
+- true if `p` is non-crossing partition else false
+
+# Examples
+```julia-repl
+julia> check_nc(Partition([1, 2, 2, 3, 1, 4], [4, 3]))
+false
+```
+"""
+function check_nc(p::Partition)
+
+    """transform partition to only upper points"""
+    p_array = vcat(p.upper_points, reverse(p.lower_points))
+
+    """Dictionary from block to size of block"""
+    block_to_size = Dict()
+
+    """Initialize dictionary"""
+    for i in p_array
+        if !(i in keys(block_to_size))
+            block_to_size[i] = 1
+        else
+            block_to_size[i] = get(block_to_size, i, -1) + 1
+        end
+    end
+
+    """blocks we have already seen in the iteration process"""
+    already_seen = Set()
+    last_incompleted = []
+    incompleted = Set()
+
+    for (i, n) in enumerate(p_array)
+        if n in incompleted && (isempty(last_incompleted) ? -1 : last_incompleted[end]) != n
+            return false
+        end
+        if !(n in already_seen)
+            push!(already_seen, n)
+            block_to_size[n] = get(block_to_size, n, -1) - 1
+            if get(block_to_size, n, -1) > 0 && (isempty(last_incompleted) ? -1 : last_incompleted[end]) != n
+                push!(last_incompleted, n)
+                push!(incompleted, n)
+            end
+        else
+            if p_array[i-1] != n && get(block_to_size, p_array[i-1], -1) != 0
+                return false
+            else
+                block_to_size[n] = get(block_to_size, n, -1) - 1
+                if get(block_to_size, n, -1) == 0 && !isempty(last_incompleted)
+                    if last_incompleted[end] == n
+                        pop!(last_incompleted)
+                    end
+                    delete!(incompleted, n)
+                end
+                if get(block_to_size, n, -1) > 0 && (isempty(last_incompleted) ? -1 : last_incompleted[end]) != n
+                    push!(last_incompleted, n)
+                    push!(incompleted, n)
+                end
+            end
+        end
+    end
+    return true
 end
