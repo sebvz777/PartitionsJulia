@@ -17,29 +17,29 @@ mutable struct LinearCombPartition
     end
 
     function simplify_term(term::LinearCombPartition)
-        """
-        Simplify term by removing zero summand and distributivity
-        """
-            partitions = Dict()
-    
-            for (i, (i1, i2)) in enumerate(copy(term.sum))
-                """removing zero summand"""
-                if i1 == 0
-                    pop!(term.sum, [i1, i2])
-                    continue
-                end
-                """simplifying distributivity"""
-                if !(i2 in keys(partitions))
-                    partitions[i2] = i1
-                else
-                    deleteat!(term.sum, findfirst(x -> x == [i1, i2], term.sum))
-                    deleteat!(term.sum, findfirst(x -> x == [get(partitions, i2, -1), i2], term.sum))
-                    push!(term.sum, [get(partitions, i2, -1) + i1, i2])
-                    partitions[i2] = get(partitions, i2, -1) + i1
-                end
+    """
+    Simplify term by removing zero summand and distributivity
+    """
+        partitions = Dict()
+
+        for (i, (i1, i2)) in enumerate(copy(term.sum))
+            """removing zero summand"""
+            if i1 == 0
+                pop!(term.sum, [i1, i2])
+                continue
             end
-            term.sum
+            """simplifying distributivity"""
+            if !(i2 in keys(partitions))
+                partitions[i2] = i1
+            else
+                deleteat!(term.sum, findfirst(x -> x == [i1, i2], term.sum))
+                deleteat!(term.sum, findfirst(x -> x == [get(partitions, i2, -1), i2], term.sum))
+                push!(term.sum, [get(partitions, i2, -1) + i1, i2])
+                partitions[i2] = get(partitions, i2, -1) + i1
+            end
         end
+        term.sum
+    end
 end
 
 function simplify_term(term::LinearCombPartition)

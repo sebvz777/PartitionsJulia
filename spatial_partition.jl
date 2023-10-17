@@ -28,6 +28,12 @@ struct SpatialPartition
     end
 end
 
+function spatial_partition(upper::Array{Int64, 1}, lower::Array{Int64, 1}, dim::Int)
+
+    return SpatialPartition(upper, lower, dim)
+
+end
+
 function hash(p::SpatialPartition)
 
     hash([hash(p.upper_points), hash(p.lower_points), hash(p.dimension)])
@@ -646,7 +652,13 @@ function construct_category(p::Array, n::Int, tracing::Bool = false, max_artific
     return partitions
 end
 
-a = SpatialPartition([], [1, 1], 2)
+a = SpatialPartition([1, 1], [1, 1], 2)
+
+b = spatial_partition([1, 1], [1, 1], 2)
+
+println(a == b)
+
+"""a = SpatialPartition([], [1, 1], 2)
 b = SpatialPartition([1, 2, 1, 3], [4, 2, 4, 3], 2)
 
 c = SpatialPartition([1, 2, 3, 2], [1, 4, 3, 4], 2)
@@ -655,4 +667,4 @@ dd = SpatialPartition([1, 2, 3, 4], [3, 2, 1, 4], 2)
 (p, t) = construct_category([a, c, dd], 8, true, 10)
 
 get_trace(t, b)
-println("..............................")
+println("..............................")"""

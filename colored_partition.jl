@@ -30,6 +30,12 @@ struct ColoredPartition
     end
 end
 
+function colored_partition(upper::Array{Int64, 1}, lower::Array{Int64, 1}, color_upper::Array{Int64, 1}, color_lower::Array{Int64, 1})
+
+    return ColoredPartition(upper, lower, color_upper, color_lower)
+
+end
+
 function hash(p::ColoredPartition)
 
     hash([hash(p.upper_points), hash(p.lower_points), hash(p.color_upper_points), hash(p.color_lower_points)])
