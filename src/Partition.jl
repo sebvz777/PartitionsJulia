@@ -63,12 +63,6 @@ function tensor_product(p::Partition, q::Partition)
     Partition(vcat(p.upper_points, q_new[1]), vcat(p.lower_points, q_new[2]))
 end
 
-function ⊗(p::Partition, q::Partition)
-
-    q_new = helper_new_point_values_array([p.upper_points, p.lower_points], [q.upper_points, q.lower_points])
-    Partition(vcat(p.upper_points, q_new[1]), vcat(p.lower_points, q_new[2]))
-end
-
 """
 involution(p::Partition)
 
@@ -190,7 +184,7 @@ Partition([1], [1, 1]), 0
 """
 function composition_loops(p::Partition, q::Partition)
     
-    @assert is_composable(p, q) "format not fitting"
+    !is_composable(p, q) ? error("format not fitting") : 
 
     # Work with copies to not change the input partitions
     p_copy::Partition = copy(p)
@@ -299,8 +293,4 @@ function composition_loops(p::Partition, q::Partition)
     end
     
     return [ret, length(related_comp)]
-end
-
-function ⋅(p::Partition, q::Partition)
-    composition(p, q)
 end

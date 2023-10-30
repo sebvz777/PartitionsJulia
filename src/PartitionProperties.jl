@@ -140,6 +140,10 @@ function is_balanced(p::T) where {T<:Union{Partition, ColoredPartition}}
 
     p_array = vcat(get_upper_points(p), get_lower_points(p))
 
+    # remember length lower points
+    upper = length(get_upper_points(p))
+    upper_uneven = upper % 2 == 1 ? true : false
+
     # Dictionary from block to sum of -1 (repr odd indices) and 1 (repr even indices)
     block_to_size = Dict()
     block_to_blocksize = Dict()
@@ -159,13 +163,13 @@ function is_balanced(p::T) where {T<:Union{Partition, ColoredPartition}}
 
     # Initialize dictionary
     for (i, n) in enumerate(p_array)
-        if i % 2 == 1 && get(block_to_blocksize, n, -1) != 1
+        condition = upper_uneven ? i % 2 == 1 : (i <= upper ? i % 2 == 1 : i % 2 == 0)
+        if condition # && get(block_to_blocksize, n, -1) != 1
             block_to_size[n] = get(block_to_size, n, -1) - 1
-        elseif get(block_to_blocksize, n, -1) != 1
+        else # if get(block_to_blocksize, n, -1) != 1
             block_to_size[n] = get(block_to_size, n, -1) + 1
         end
     end
-
     # check whether singeltons are balanced
     #singeltons = 0
     #for i in keys(block_to_blocksize)
