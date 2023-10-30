@@ -1,5 +1,8 @@
 module ParitionsJulia
 
+export Partition
+export tensor_product
+
 include("AbstractPartition.jl")
 include("util.jl")
 include("Partition.jl")

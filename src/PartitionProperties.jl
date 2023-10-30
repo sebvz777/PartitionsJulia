@@ -142,22 +142,40 @@ function is_balanced(p::T) where {T<:Union{Partition, ColoredPartition}}
 
     # Dictionary from block to sum of -1 (repr odd indices) and 1 (repr even indices)
     block_to_size = Dict()
+    block_to_blocksize = Dict()
 
     # prefill dict with zeros
-    for i in 1:findmax(p_array)[1]
+    for i in p_array
         block_to_size[i] = 0
     end
+    # to identify singeltons
+    # for i in p_array
+    #     if i in keys(block_to_blocksize)
+    #        block_to_blocksize[i] = get(block_to_blocksize, i, -1) + 1
+    #    else
+    #        block_to_blocksize[i] = 1
+    #    end
+    #end
 
     # Initialize dictionary
     for (i, n) in enumerate(p_array)
-        if i % 2 == 1
+        if i % 2 == 1 && get(block_to_blocksize, n, -1) != 1
             block_to_size[n] = get(block_to_size, n, -1) - 1
-        else
+        elseif get(block_to_blocksize, n, -1) != 1
             block_to_size[n] = get(block_to_size, n, -1) + 1
         end
     end
 
-    return all(i -> i == 0, values(block_to_size))
+    # check whether singeltons are balanced
+    #singeltons = 0
+    #for i in keys(block_to_blocksize)
+    #    if get(block_to_blocksize, i, -1) != 1
+    #        continue
+    #    end
+    #    i % 2 == 1 ? singeltons -= 1 : singeltons += 1
+    #end
+
+    return all(i -> i == 0, values(block_to_size)) #&& singeltons == 0
 end
 
 """

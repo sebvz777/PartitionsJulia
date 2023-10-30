@@ -39,8 +39,6 @@ function copy(p::Partition)
     return Partition(copy(p.upper_points), copy(p.lower_points))
 end
 
-all_NC2_4 = [Partition(Int64[], [1, 1, 2, 2]), Partition([1, 2, 2, 1], Int64[]), Partition([1], [2, 2, 1]), Partition([1, 2, 2], [1]), Partition([1, 1, 2], [2]), Partition([1, 2], [1, 2]), Partition([1, 1, 2, 2], Int64[]), Partition([1], [1, 2, 2]), Partition(Int64[], [1, 2, 2, 1]), Partition([1, 1], [2, 2]), Partition([1, 1], Int64[]), Partition([1], [1]), Partition(Int64[], [1, 1]), Partition([], [])]
-
 """
 tensor_product(p::Partition, q::Partition)
 
