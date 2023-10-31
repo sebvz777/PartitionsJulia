@@ -6,7 +6,8 @@ function do_unary(
     max_length::Int, 
     all_partitions_by_size::Dict, 
     all_partitions_by_size_top_bottom::Array, 
-    trace::Dict)::Array
+    trace::Dict,
+    spatial_rotation::Function)
 
     stop::Bool = false
     while !stop
@@ -27,6 +28,22 @@ function do_unary(
                 elseif length(get_lower_points(pmod)) > 0
                     a = rotation(pmod, false, false)
                 end
+
+                # add to all_partitions
+                if !(a in all_partitions)
+                    trace[a] = tuple([pmod, "r"])
+                    stop_whole = false
+                    stop = false
+                    push!(all_partitions, a)
+                    push!(to_unary, a)
+
+                    # call functions which adds the partition a into the right set in the dict
+                    all_partitions_by_size = add_partition_to_dict(all_partitions_by_size, a)
+                    all_partitions_by_size_top_bottom = add_partition_to_composition_dict(
+                            all_partitions_by_size_top_bottom, a)
+                end
+            elseif length(methods(spatial_rotation)[1].sig.parameters)-1 == 1
+                a = spatial_rotation(pmod)
 
                 # add to all_partitions
                 if !(a in all_partitions)
@@ -291,7 +308,9 @@ julia> length(construct_category([Partition([1, 2], [2, 1])], 6, true))
 [<Partition([1, 2], [2, 1])> ∩ P(6), Dict{Partition -> Tuple}]
 ```
 """
-function construct_category(p::Array, n::Int, tracing::Bool = false, max_artificial::Int = 0)
+function construct_category(p::Array, n::Int, tracing::Bool = false, max_artificial::Int = 0, spatial_rotation::Function = nothing_function() = nothing)
+    
+    @assert length(methods(spatial_rotation)[1].sig.parameters)-1 == 0 || (p isa Array{SpatialPartition})
 
     # store all candidates found
     all_partitions::Set{AbstractPartition} = Set()
@@ -359,7 +378,7 @@ function construct_category(p::Array, n::Int, tracing::Bool = false, max_artific
         end
 
         # fist phase: all possible combinations of unary operations
-        (stop_whole, all_partitions, already_u, all_partitions_by_size, all_partitions_by_size_top_bottom, trace) = do_unary(to_unary, all_partitions, stop_whole, already_u, max_length, all_partitions_by_size, all_partitions_by_size_top_bottom, trace)
+        (stop_whole, all_partitions, already_u, all_partitions_by_size, all_partitions_by_size_top_bottom, trace) = do_unary(to_unary, all_partitions, stop_whole, already_u, max_length, all_partitions_by_size, all_partitions_by_size_top_bottom, trace, spatial_rotation)
 
         # store pairs that are candidates to get tensor product
         to_tens::Set{Array} = Set()
