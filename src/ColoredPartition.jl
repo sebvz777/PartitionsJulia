@@ -92,7 +92,7 @@ This function applies composition between p and q (in O(nlogn)).
 """
 function composition_loops(p::ColoredPartition, q::ColoredPartition)
 
-    @assert p.color_upper_points == q.color_lower_points "p upper and q lower colors are different in composition"
+    p.color_upper_points != q.color_lower_points ? error("p upper and q lower colors are different in composition") : 
 
     comp_loops = composition_loops(p.partition, q.partition)
     

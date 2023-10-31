@@ -55,7 +55,7 @@ This function applies on p tensor product with q (in O(n)).
 """
 function tensor_product(p::SpatialPartition, q::SpatialPartition)
 
-    @assert p.dimension == q.dimension "p and q have different dimensions in tensor product"
+    p.dimension != q.dimension ? error("p and q have different dimensions in tensor product") : 
 
     SpatialPartition(tensor_product(p.partition, q.partition), p.dimension)
 end
@@ -91,7 +91,7 @@ This function applies composition between p and q (in O(nlogn)).
 """
 function composition_loops(p::SpatialPartition, q::SpatialPartition)
 
-    @assert is_composable(p, q) "p and q have different dimensions in composition"
+    !is_composable(p, q) ? error("p and q have different dimensions in composition") : 
 
     comp_loops = composition_loops(p.partition, q.partition)
 
