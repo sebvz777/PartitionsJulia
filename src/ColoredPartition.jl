@@ -9,11 +9,9 @@ ColoredPartition
 Initialize colored Partition object
 
 # Arguments
-- `upper_points`: upper points of colored Partition as array
-- `lower_points`: lower points of coloredPartition as array
+- `partition`: Partition object which is generalized with coloring `color_upper_points` and `color_lower_points`
 - `color_upper_points`: color (in [0, 1]) of upper points
 - `color_lower_points`: color (in [0, 1]) of lower points
-- `normal_form`: optional input, transforms to normal form if true, else colored partition syntax remains
 """
 struct ColoredPartition <: AbstractPartition
     partition::Partition

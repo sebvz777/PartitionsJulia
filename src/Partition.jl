@@ -7,11 +7,17 @@ using InteractiveUtils
 """
 Partition
 
-Initialize Partition object
+Initialize Partition object, while transforming object to "normal form". 
 
 # Arguments
 - `upper_points`: upper points of Partition as array
 - `lower_points`: lower points of Partition as array
+
+# Examples
+```julia-repl
+julia> Partition([2, 4], [4, 99])
+Partition([1, 2], [2, 3])
+```
 """
 struct Partition <: AbstractPartition
     upper_points::Array{Int64, 1}
@@ -194,7 +200,7 @@ function composition_loops(p::Partition, q::Partition)
     new_ids::Dict{Int, Int} = Dict()
     
     # fitting the second partition-values to the first and changing if connection
-    for (i,n) in enumerate(array_q[2])
+    for (i, n) in enumerate(array_q[2])
         if !(n in keys(new_ids))
             new_ids[n] = p.upper_points[i]
         else
@@ -251,14 +257,14 @@ function composition_loops(p::Partition, q::Partition)
     end
     
     # giving the top part new values
-    for (i,n) in enumerate(array_q[1])
+    for (i, n) in enumerate(array_q[1])
         if n in keys(new_ids)
             array_q[1][i] = get(new_ids, n, -1)
         end
     end
 
     # giving the top part new values
-    for (i,n) in enumerate(p_copy.lower_points)
+    for (i, n) in enumerate(p_copy.lower_points)
         if n in keys(new_ids)
             p_copy.lower_points[i] = get(new_ids, n, -1)
         end
