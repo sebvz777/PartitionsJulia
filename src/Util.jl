@@ -1,5 +1,3 @@
-include("AbstractPartition.jl")
-
 """
 helper_new_point_values_array(p::Array)
 

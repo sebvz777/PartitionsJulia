@@ -1,7 +1,6 @@
 import Base.hash
 import Base.==
 import Base.copy
-using InteractiveUtils
 
 """
 SpatialPartition
