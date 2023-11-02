@@ -1,3 +1,8 @@
+"""
+AbstractPartition
+
+Abstract type of Partition for classical-, colored- and spatial Partitions.
+"""
 abstract type AbstractPartition end
 
 function composition(p::T, q::T) where {T <: AbstractPartition}

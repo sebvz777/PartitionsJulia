@@ -9,10 +9,8 @@ SpatialPartition
 Initialize Spatial Partition object
 
 # Arguments
-- `upper_points`: upper points of Spatial Partition as array
-- `lower_points`: lower points of Spatial Partition as array 
+- `partition`: Partition object which is generalized with dimension `dimension`
 - `dimension`: dimension of the spatial Partition
-- `normal_form`: optional input, transforms to normal form if true, else spatial partition syntax remains
 """
 struct SpatialPartition <: AbstractPartition
     partition::Partition
