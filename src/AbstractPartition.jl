@@ -16,3 +16,7 @@ end
 function ⊗(p::T, q::T) where {T <: AbstractPartition}
     tensor_product(p, q)
 end
+
+function *(p::AbstractPartition)
+    involution(p)
+end
