@@ -3,7 +3,7 @@ import Base.==
 import Base.copy
 
 """
-ColoredPartition
+    ColoredPartition
 
 Initialize colored Partition object
 
@@ -14,11 +14,11 @@ Initialize colored Partition object
 """
 struct ColoredPartition <: AbstractPartition
     partition::Partition
-    color_upper_points::Array{Int64, 1}
-    color_lower_points::Array{Int64, 1}
+    color_upper_points::Vector
+    color_lower_points::Vector
 end
 
-function colored_partition(partition::Partition, color_upper::Array{Int64, 1}, color_lower::Array{Int64, 1})
+function colored_partition(partition::Partition, color_upper::Vector, color_lower::Vector)
 
     return ColoredPartition(partition, color_upper, color_lower)
 
@@ -42,9 +42,9 @@ end
 
 
 """
-tensor_product(p::ColoredPartition, q::ColoredPartition)
+    tensor_product(p::ColoredPartition, q::ColoredPartition)
 
-This function applies on p tensor product with q (in O(n)).
+This function applies on p tensor product with q.
 
 # Arguments
 - `p`: Input colored partition
@@ -59,9 +59,9 @@ function tensor_product(p::ColoredPartition, q::ColoredPartition)
 end
 
 """
-involution(p::ColoredPartition)
+    involution(p::ColoredPartition)
 
-This function applies an involution on `p` (in O(n) because normal_form, else O(1)).
+This function applies an involution on `p`.
 
 # Arguments
 - `p`: Input colored partition
@@ -76,9 +76,9 @@ function involution(p::ColoredPartition)
 end
 
 """
-composition_loops(p::ColoredPartition, q::ColoredPartition)
+    composition_loops(p::ColoredPartition, q::ColoredPartition)
 
-This function applies composition between p and q (in O(nlogn)).
+This function applies composition between p and q.
 
 # Arguments
 - `p`: Input partition
@@ -98,9 +98,9 @@ function composition_loops(p::ColoredPartition, q::ColoredPartition)
 end
 
 """
-rotation(p::ColoredPartition)
+    rotation(p::ColoredPartition)
 
-This function applies a rotation on `p` (in O(n) because normal_form, else O(1)). 
+This function applies a rotation on `p`. 
 Throws error if rotation not possible.
 
 # Arguments
@@ -113,13 +113,13 @@ Throws error if rotation not possible.
 """
 function rotation(p::ColoredPartition, lr::Bool, tb::Bool)
 
-    if tb && isempty(get_upper_points(p))
+    if tb && isempty(upper_points(p))
         error("Partition has no top part.")
-    elseif !tb && isempty(get_lower_points(p))
+    elseif !tb && isempty(lower_points(p))
         error("Partition has no bottom part.")
     end
 
-    ret::Array = [copy(get_upper_points(p)), copy(get_lower_points(p)), copy(p.color_upper_points), copy(p.color_lower_points)]
+    ret::Tuple = (copy(upper_points(p)), copy(lower_points(p)), copy(p.color_upper_points), copy(p.color_lower_points))
 
         if lr
             if tb
@@ -160,5 +160,3 @@ function rotation(p::ColoredPartition, lr::Bool, tb::Bool)
         end
     ColoredPartition(Partition(ret[1], ret[2]), ret[3], ret[4])
 end
-
-
